@@ -1,0 +1,3 @@
+.venv
+.airflow_env
+.python-version
