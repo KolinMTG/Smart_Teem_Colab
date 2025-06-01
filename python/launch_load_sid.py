@@ -58,7 +58,14 @@ def insert_chambres(file_path, conn):
         insert_query = f"INSERT INTO CHAMBRE ({', '.join(headers)}) VALUES ({placeholders})"
 
         with conn.cursor() as cursor:
+            cursor.execute("SHOW WAREHOUSES")
+            # cursor.execute("ALTER WAREHOUSE COMPUTE_WH RESUME")
             cursor.execute("USE WAREHOUSE COMPUTE_WH")  # le nom du warehouse actif
+
+
+            for row in cursor.fetchall():
+                logging.info(f"Warehouse dispo : {row}")
+
             for i, line in enumerate(data, 1):
                 # On ignore la première valeur inutile (l'ID de ligne)
                 values = line.strip().split(";")[1:]
