@@ -16,16 +16,14 @@ def load_files_by_date(date_str, conn):
     if not folder.exists():
         logging.error(f"Dossier non trouvé : {folder.resolve()}")
         return
-    # for table in ["CHAMBRE", "CONSULTATION", "HOSPITALISATION", "MEDICAMENT", "PATIENT", "PERSONNEL", "TRAITEMENT"]:
-    for table in ["CONSULTATION", "HOSPITALISATION", "MEDICAMENT", "PATIENT", "PERSONNEL", "TRAITEMENT"]:
-        file_path = folder / f"{table}_{date_str}.txt"
-
-        # logging.info("--------------------------------------------------------")
-        # logging.info(f"🔍 Vérification du fichier : {file_path.name}")
-        # logging.info(f"📂 Chemin complet : {file_path.resolve()}")
+    for table in ["CHAMBRE", "CONSULTATION", "HOSPITALISATION", "MEDICAMENT", "PATIENT", "PERSONNEL", "TRAITEMENT"]:
+        # Gérer le nom du fichier selon la table
+        if table == "PATIENT":
+            file_path = folder / f"{table}{date_str}.txt"
+        else:
+            file_path = folder / f"{table}_{date_str}.txt"
 
         if file_path.exists():
-            # logging.info(f"Fichier trouvé : {file_path.name}")
             print(f"➡️ Insertion de la table {table} depuis {file_path}")
             insert_generic(file_path, conn, table)
         else:
