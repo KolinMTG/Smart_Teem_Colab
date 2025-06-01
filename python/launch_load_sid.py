@@ -34,7 +34,9 @@ def connect_to_snowflake():
             account=os.getenv("SNOWFLAKE_ACCOUNT"),
             warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
             role=os.getenv("SNOWFLAKE_ROLE"),
-            database=os.getenv("SNOWFLAKE_DATABASE")
+            #database=os.getenv("SNOWFLAKE_DATABASE")
+            database = "BASE_STAGING",
+            schema = "PUBLIC"
         )
         logging.info("Connexion à Snowflake réussie.")
         return conn
@@ -47,26 +49,42 @@ def insert_chambres(file_path, conn):
         with open(file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
-        headers = lines[0].strip().lstrip(";").split(";")
+        # On ignore la première colonne vide du header (commence par ;)
+        headers = lines[0].strip().split(";")[1:]
         data = lines[1:]
 
-        insert_query = "INSERT INTO CHAMBRES ({cols}) VALUES ({placeholders})".format(
-            cols=", ".join(headers),
-            placeholders=", ".join(["%s"] * len(headers))
-        )
+        # Placeholder :1, :2, ..., :N pour Snowflake
+        placeholders = ", ".join(["%s"] * len(headers))
+        insert_query = f"INSERT INTO CHAMBRE ({', '.join(headers)}) VALUES ({placeholders})"
 
         with conn.cursor() as cursor:
+            cursor.execute("USE WAREHOUSE COMPUTE_WH")  # le nom du warehouse actif
             for i, line in enumerate(data, 1):
-                values = line.strip().split(";")
+                # On ignore la première valeur inutile (l'ID de ligne)
+                values = line.strip().split(";")[1:]
+
+                if len(values) != len(headers):
+                    logging.warning(f"Ligne {i} ignorée : {len(values)} valeurs vs {len(headers)} colonnes")
+                    continue
+
                 try:
+                    # Pour log uniquement : une requête visible avec les vraies valeurs
+                    escaped_values = [f"'{v}'" if not v.isdigit() else v for v in values]
+                    log_query = f"INSERT INTO CHAMBRE ({', '.join(headers)}) VALUES ({', '.join(escaped_values)})"
+                    logging.info(f"Requête exécutée (log uniquement) : {log_query}")
+
+                    # Exécution réelle (paramétrée et sécurisée)
                     cursor.execute(insert_query, tuple(values))
+
                     logging.info(f"Ligne {i} insérée avec succès.")
                 except Exception as e:
                     logging.error(f"Erreur à la ligne {i} : {e}")
+
         logging.info("✅ Insertion terminée.")
     except Exception as e:
         logging.error(f"Erreur lors du traitement du fichier : {e}")
         raise
+
 
 def main():
     logging.info("=== Début du chargement des chambres ===")
