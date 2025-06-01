@@ -16,43 +16,15 @@ def load_files_by_date(date_str, conn):
     if not folder.exists():
         logging.error(f"Dossier non trouvé : {folder.resolve()}")
         return
-    # for table in ["CHAMBRE", "CONSULTATION", "HOSPITALISATION", "MEDICAMENT", "PATIENT", "PERSONNEL", "TRAITEMENT"]:
-    for table in ["CONSULTATION", "HOSPITALISATION", "MEDICAMENT", "PATIENT", "PERSONNEL", "TRAITEMENT"]:
-        file_path = folder / f"{table}_{date_str}.txt"
-
-        # logging.info("--------------------------------------------------------")
-        # logging.info(f"🔍 Vérification du fichier : {file_path.name}")
-        # logging.info(f"📂 Chemin complet : {file_path.resolve()}")
+    for table in ["CHAMBRE", "CONSULTATION", "HOSPITALISATION", "MEDICAMENT", "PATIENT", "PERSONNEL", "TRAITEMENT"]:
+        # Gérer le nom du fichier selon la table
+        if table == "PATIENT":
+            file_path = folder / f"{table}{date_str}.txt"
+        else:
+            file_path = folder / f"{table}_{date_str}.txt"
 
         if file_path.exists():
-            # logging.info(f"Fichier trouvé : {file_path.name}")
             print(f"➡️ Insertion de la table {table} depuis {file_path}")
             insert_generic(file_path, conn, table)
         else:
             logging.warning(f"Fichier {table} manquant : {file_path.name}")
-
-
-def main():
-    # 🗓 Liste des dates à traiter
-    dates = [
-        "20240429",
-        #"20240430",
-        #"20240501",
-        #"20240502",
-        #"20240503",
-        #"20240504",
-        #"20240505",
-        #"20240506",
-        #"20240507",
-        #"20240508",
-    ]
-    conn = get_connection()
-    try:
-        for date_str in dates:
-            load_files_by_date(date_str, conn)
-    finally:
-        conn.close()
-        logging.info("Connexion Snowflake fermée.")
-
-if __name__ == "__main__":
-    main()
