@@ -1,0 +1,174 @@
+@startuml
+
+
+package SOCLE {
+
+
+ class ROOM {
+   ROOM_NUM : INTEGER // Numéro de chambre
+   ROOM_NAME : VARCHAR[20] // Nom de la chambre
+   FLOR_NUM : BYTEINT // Numéro d'étage
+   BULD_NAME : VARCHAR[20] // Nom du batiment
+   ROOM_TYP : VARCHAR[10] // Type de chambre[simple, double]
+   ROOM_DAY_RATE : SMALLINT // Tarif journalier de la chambre
+   CRTN_DT : DATE // Date de création de la chambre
+   EXEC_ID : INTEGER // Identifiant de l'exécution
+ }
+
+
+ class TREATMENT {
+   TRET_ID : INTEGER // Identifiant du traitement
+   MEDC_ID : INTEGER // Identifiant du médicament
+   MEDC_QTY : SMALLINT // Quantité du médicament
+   DOSG_DSC : VARCHAR[100] // Description de la posologie
+   CONS_ID : INTEGER // Identifiant de la consultation
+   TRET_CRTN_DTTM : TIMESTAMP[0] // Date heure de création du traitment
+   EXEC_ID : INTEGER // Identifiant de l'exécution
+ }
+
+
+ class PARTY {
+   PART_ID : INTEGER // Identifiant du tiers
+   SRC_ID : INTEGER // Identifiant source
+   SRC_TYP : VARCHAR[50] // Type de l'identifiant
+ }
+
+
+ class INDIVIDUAL {
+   PART_ID  : INTEGER // Identifiant de l'individu
+   INDV_NAME : VARCHAR[100] // Nom de l'individu
+   INDV_FIRS_NAME : VARCHAR[100] // Prénom de l'individu
+   INDV_STTS_CD : VARCHAR[10] // Statut de l'individu
+   CRTN_DTTM : TIMESTAMP[0] // Date heure de création de l'individu
+   UPDT_DTTM : TIMESTAMP[0] // Date heure de mise à jour de l'individu
+   EXEC_ID : INTEGER // Identifiant de l'exécution
+   BIRT_DT : DATE // Date de naissance de l'individu
+   BIRT_CITY : VARCHAR[100] // Ville de naissance de l'individu
+   BIRT_CNTR : VARCHAR[100] // Pays de naissance de l'individu
+   SOCL_NUM : VARCHAR[15] // Numéro de sécurité sociale
+ }
+
+
+ class STAFF {
+   PART_ID  : INTEGER // Identifiant du personnel
+   WORK_STRT_DTTM : TIMESTAMP[0] // Date heure de début d'activité à l'hopital
+   WORK_END_DTTM : TIMESTAMP[0] // Date heure de fin d'activité à l'hopital
+   WORK_END_RESN : VARCHAR[100] // Raison de la fin d'actvité
+   EXEC_ID : INTEGER // Identifiant de l'exécution
+ }
+
+
+ class TELEPHONE {
+   PART_ID  : INTEGER // Identifiant de l'individu
+   CNTR_IND : VARCHAR[5] // Indicatif du pays
+   TELP_NUM : VARCHAR[20] // Numéro de téléphone de l'individu
+   STRT_VALD_DTTM : TIMESTAMP[0] // Date heure de début de validité
+   END_VALD_DTTM : TIMESTAMP[0] // Date heure de fin de validité
+   EXEC_ID : INTEGER // Identifiant de l'exécution
+ }
+
+
+ class ADDRESS {
+   PART_ID  : INTEGER // Identifiant de l'individu
+   STRT_NUM : VARCHAR[10] // Numéro de voie de l'adresse postale
+   STRT_DSC : VARCHAR[250] // Libellé de voie de l'adresse postale
+   COMP_STRT : VARCHAR[250] // Complément d'adresse
+   POST_CD : VARCHAR[10] // Code postal
+   CITY_NAME : VARCHAR[100] // Ville
+   CNTR_NAME : VARCHAR[100] // Pays
+   +STRT_VALD_DTTM : TIMESTAMP[0] // Date heure de début de validité
+   END_VALD_DTTM : TIMESTAMP[0] // Date heure de fin de validité
+   EXEC_ID : INTEGER // Identifiant de l'exécution
+ }
+
+
+ class CONSULTATION {
+   CONS_ID : INTEGER // Identifiant de la consultation
+   STFF_ID : INTEGER // Identifiant du personnel
+   PATN_ID : INTEGER // Identifiant du patient
+   CONS_STRT_DTTM : TIMESTAMP[0] // Date heure de début de la consultation
+   CONS_END_DTTM : TIMESTAMP[0] // Date heure de fin de la consultation
+   PATN_WEGH : INTEGER // Poids du patient
+   PATN_TEMP : INTEGER // Température du patient
+   TEMP_UNIT : VARCHAR[15] // Unité de température
+   BLD_PRSS : INTEGER // Tension du patient
+   PATH_DSC : VARCHAR[250] // Description de la pathologie
+   DIBT_IND : BYTEINT // Positif au diabète ?
+   TRET_ID : TIMESTAMP[0] // Identifiant du traitement
+   HOSP_IND : BYTEINT // Consultation entrainant une hospitalisation ?
+   EXEC_ID : INTEGER // Identifiant de l'exécution
+ }
+
+
+ class HOSPITALIZATION {
+   HOSP_ID : INTEGER // Identifiant de l'hospitalisation
+   CONS_ID : INTEGER // Identifiant de la consultation
+   ROOM_NUM : SMALLINT // Numéro de chambre
+   HOSP_STRT_DTTM : TIMESTAMP[0] // Date heure de début de l'hospitalisation
+   HOSP_END_DTTM : TIMESTAMP[0] // Date heure de fin de l'hospitalisation
+   HOSP_FINL_RATE : TIMESTAMP[0] // Cout de l'hospitalisation
+   STFF_ID : INTEGER // Identifiant du personnel en charge de l'hospitalisation
+   EXEC_ID : INTEGER // Identifiant de l'exécution
+ }
+
+
+ class MEDICINE {
+   MEDC_ID : INTEGER // Identifiant du médicament
+   MEDC_CD : VARCHAR[10] // Code du médicament
+   MEDC_NAME : VARCHAR[250] // Nom du médicament
+   MEDC_COND : VARCHAR[100] // Conditionnement du médicament
+   MEDC_CATG : VARCHAR[100] // Catégorie de médicament
+   MANF_BRND : VARCHAR[100] // Marque du fabricant du médicament
+   EXEC_ID : INTEGER // Identifiant de l'exécution
+ }
+}
+
+
+package TECHNIQUE {
+
+
+ class SUIVI_TRAITEMENT {
+   RUN_ID : INTEGER // Identifiant du run
+   EXEC_ID : INTEGER // Identifiant d'exécution du traitement
+   SCRPT_NAME : VARCHAR[250] // Nom du script exécuté
+   EXEC_STRT_DTTM : TIMESTAMP[0] // Date de début d'éxécution du script
+   EXEC_END_DTTM : TIMESTAMP[0] // Date de fin d'éxécution du script
+   EXEC_STTS_CD : VARCHAR[10] // Code statut de l'exécution
+ }
+
+
+ class SUIVI_RUN {
+   RUN_ID : INTEGER // Identifiant du run
+   RUN_STRT_DTTM : TIMESTAMP[0] // Date de début d'éxécution du run
+   RUN_END_DTTM : TIMESTAMP[0] // Date de fin d'éxécution du run
+   RUN_STTS_CD : VARCHAR[10] // Code statut du run
+ }
+}
+
+
+
+
+PARTY --> TELEPHONE : PART_ID
+PARTY --> STAFF : PART_ID
+PARTY --> INDIVIDUAL : PART_ID
+PARTY --> HOSPITALIZATION : PART_ID
+PARTY --> ADDRESS : PART_ID
+PARTY --> CONSULTATION : PART_ID
+
+
+CONSULTATION --> HOSPITALIZATION : CONS_ID
+
+
+TREATMENT --> CONSULTATION : TRET_ID
+MEDICINE --> TREATMENT : MEDC_ID
+
+
+ROOM --> HOSPITALIZATION : ROOM_NUM
+
+
+TECHNIQUE --> SOCLE : EXEC_ID
+
+
+
+
+@enduml
