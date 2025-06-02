@@ -14,3 +14,12 @@ def get_connection():
         database="BASE_STAGING",
         schema="PUBLIC"
     )
+
+if __name__ == "__main__":
+    #! test the connection
+    try:
+        conn = get_connection()
+        print("Connection successful!")
+        conn.close()
+    except Exception as e:
+        print(f"Connection failed: {e}")

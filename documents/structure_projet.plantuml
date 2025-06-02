@@ -1,0 +1,30 @@
+Pour savoir quel fichier appel quel autre fichier, etc...
+Pour mieux communiquer sur le projet. 
+
+
+@startuml
+class connect{
+    get_connection() 
+}
+
+class install_sid{
+    run_installation()
+}
+
+class launch_load_sid{
+    main()
+}
+
+class insert_generic{
+    insert_generic(file_path, conn, table_name)
+}
+
+class load_all{
+    load_files_by_date(date_str, conn )
+}
+connect -> install_sid
+connect -> load_all
+insert_generic -> load_all
+load_all -> launch_load_sid
+install_sid -> launch_load_sid
+

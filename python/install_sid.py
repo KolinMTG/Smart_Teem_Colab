@@ -40,7 +40,10 @@ SCRIPT_ORDER = [
     "05_create_soc_tables.sql"
 ]
 
-def connect_to_snowflake():
+def connect_to_snowflake() -> snowflake.connector.SnowflakeConnection:
+    """ Établit une connexion à Snowflake en utilisant les variables d'environnement.
+    Returns:
+        snowflake.connector.SnowflakeConnection: Connexion à Snowflake."""
     try:
         conn = snowflake.connector.connect(
             user=os.getenv("SNOWFLAKE_USER"),
@@ -55,7 +58,12 @@ def connect_to_snowflake():
         logging.error(f"Erreur de connexion à Snowflake : {e}")
         raise
 
-def execute_sql_file(conn, file_path):
+def execute_sql_file(conn : snowflake.connector.SnowflakeConnection, file_path : str) -> None:
+    """ Exécute un fichier SQL dans Snowflake.
+    Args:
+        conn: Connexion à Snowflake.
+        file_path: Chemin du fichier SQL à exécuter.
+    """
     logging.info(f"Début d'exécution du script : {file_path.name}")
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -75,7 +83,8 @@ def execute_sql_file(conn, file_path):
         logging.error(f"Échec du script {file_path.name} avec erreur : {e}")
         raise
 
-def run_installation():
+def run_installation() -> None:
+    """ Fonction principale pour exécuter l'installation du SID."""
     logging.info("=== Début de l'installation du SID médical ===")
     conn = connect_to_snowflake()
     try:
