@@ -20,7 +20,7 @@ logging.basicConfig(
     ]
 )
 
-def load_files_by_date(date_str, conn ):
+def load_files_by_date(date_str, conn):
     """Charge les fichiers de données pour une date spécifique dans la base de données.
     Args:
         date_str (str): La date au format 'YYYYMMDD'.
