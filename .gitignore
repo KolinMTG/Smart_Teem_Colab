@@ -1,3 +1,65 @@
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
 .venv
 .airflow_env
 airflow
+
+# Logs
+*.log
+logs/
+.log/
+.venv_airflow/
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# System files
+.DS_Store
+Thumbs.db
+
+# dotenv environment files: snowflake account
+.env
+
+# pytest cache
+.pytest_cache/
+
+# mypy cache
+.mypy_cache/
+
+# celery beat schedule file
+celerybeat-schedule
+
+# coverage reports
+htmlcov/
+.coverage
+.coverage.*
+
+# pyre type checker
+.pyre/
+
+#airflow
+.airflow.db
+.airflow.cfg
