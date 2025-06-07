@@ -13,29 +13,28 @@ logger = get_logger("load_wrk.log", console=True)
 # Exécution des scripts dans cet ordre
 exec_order = [
     "_insert_r_room.sql",
-    "_insert_o_tret.sql",
     "_insert_r_part.sql",
+    "_insert_r_medc.sql",
+    "_insert_o_tret.sql",
     "_insert_o_indv.sql",
     "_insert_o_stff.sql",
     "_insert_o_telp.sql",
     "_insert_o_addr.sql",
     "_insert_o_cons.sql",
-    "_insert_o_hosp.sql",
-    "_insert_r_medc.sql"
+    "_insert_o_hosp.sql"
+    
 ]
 
-def execute_sql_file_with_exec_id(conn, file_path, run_id, logger):
+def execute_sql_file_with_exec_id(conn, file_path,exec_id:int, logger):
     """Lit, remplace {{EXEC_ID}}, exécute le fichier SQL."""
     with open(file_path, encoding="utf-8") as f:
         content = f.read()
-    
-    table_name = file_path.stem.replace("_insert_", "").replace(".sql", "").upper()
-    exec_id = f"{run_id}__{table_name}"
+
 
     logger.info(f"▶️ Exécution du script : {file_path.name} avec exec_id = {exec_id}")
     
     # Remplacement de l'placeholder dans le fichier
-    content = content.replace("{{EXEC_ID}}", f"'{exec_id}'")
+    content = content.replace("%s", f"'{exec_id}'")
 
     cursor = conn.cursor()
     try:
@@ -54,10 +53,12 @@ def run():
 
     conn = get_connection()
     try:
+        exec_id = 1
         for file_name in exec_order:
             file_path = SQL_DIR / file_name
             if file_path.exists():
-                execute_sql_file_with_exec_id(conn, file_path, run_id, logger)
+                execute_sql_file_with_exec_id(conn, file_path, exec_id, logger)
+                exec_id += 1
             else:
                 logger.warning(f"⚠️ Fichier introuvable : {file_name}")
         logger.info("✅ Chargement complet WRK terminé.")

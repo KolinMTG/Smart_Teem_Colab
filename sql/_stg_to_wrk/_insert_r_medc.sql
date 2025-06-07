@@ -1,14 +1,4 @@
-WITH medic_unique AS (
-    SELECT
-        CD_MEDICAMENT,
-        NOM_MEDICAMENT,
-        CONDIT_MEDICAMENT,
-        CATG_MEDICAMENT,
-        MARQUE_FABRI,
-        DENSE_RANK() OVER (ORDER BY CD_MEDICAMENT, CATG_MEDICAMENT, MARQUE_FABRI) AS MEDC_ID
-    FROM BASE_STAGING.MEDICAMENT
-)
-INSERT INTO BASE_WORK.R_MEDC (
+INSERT INTO BASE_WORK.PUBLIC.R_MEDC (
     MEDC_ID,
     MEDC_CD,
     MEDC_NAME,
@@ -25,7 +15,19 @@ SELECT
     CATG_MEDICAMENT,
     MARQUE_FABRI,
     %s AS EXEC_ID
-FROM medic_unique;
-
-
-
+FROM (
+    WITH medic_unique AS (
+        SELECT
+            CD_MEDICAMENT,
+            NOM_MEDICAMENT,
+            CONDIT_MEDICAMENT,
+            CATG_MEDICAMENT,
+            MARQUE_FABRI,
+            DENSE_RANK() OVER (
+                ORDER BY CD_MEDICAMENT, CATG_MEDICAMENT, MARQUE_FABRI
+            ) AS MEDC_ID
+        FROM BASE_STAGING.PUBLIC.MEDICAMENT
+    )
+    SELECT *
+    FROM medic_unique
+) AS medc_final;
