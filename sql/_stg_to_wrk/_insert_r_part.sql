@@ -14,13 +14,13 @@ INSERT INTO BASE_WORK.R_PART (
     PART_ID,
     SRC_ID,
     SRC_TYP,
-    SRC_PATIENT
+    SRC_PATIENT,
 )
 SELECT
     PART_ID,
     ID_PERSONNEL AS SRC_ID,
     FONCTION_PERSONNEL AS SRC_TYP,
-    ID_PATIENT AS SRC_PATIENT
+    ID_PATIENT AS SRC_PATIENT,
 FROM combinaison_unique; -- On insère les données de notre table temporaire dans la table R_PART
 
 
