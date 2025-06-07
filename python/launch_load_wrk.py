@@ -1,18 +1,17 @@
-#script de chargement des données pour la table WRK
-"""Fichier d'exécution des scriptes SQL pour le chargement des données dans la table WRK."""
+# Script de chargement des données pour la table WRK
+"""Fichier d'exécution des scripts SQL pour le chargement des données dans la table WRK."""
+
 from log_config import get_logger
-from sql_executor import execute_sql_folder
 from connect import get_connection
 from pathlib import Path
+from datetime import datetime
 
+# Configuration
 SQL_DIR = Path(__file__).resolve().parent.parent / "sql/_stg_to_wrk"
-# Configuration du logger
 logger = get_logger("load_wrk.log", console=True)
 
-def run():
-    """Exécute les scripts SQL pour le chargement des données dans la table WRK."""
-    conn = get_connection()
-    exec_order = [
+# Exécution des scripts dans cet ordre
+exec_order = [
     "_insert_r_room.sql",
     "_insert_o_tret.sql",
     "_insert_r_part.sql",
@@ -24,20 +23,50 @@ def run():
     "_insert_o_hosp.sql",
     "_insert_r_medc.sql"
 ]
+
+def execute_sql_file_with_exec_id(conn, file_path, run_id, logger):
+    """Lit, remplace {{EXEC_ID}}, exécute le fichier SQL."""
+    with open(file_path, encoding="utf-8") as f:
+        content = f.read()
+    
+    table_name = file_path.stem.replace("_insert_", "").replace(".sql", "").upper()
+    exec_id = f"{run_id}__{table_name}"
+
+    logger.info(f"▶️ Exécution du script : {file_path.name} avec exec_id = {exec_id}")
+    
+    # Remplacement de l'placeholder dans le fichier
+    content = content.replace("{{EXEC_ID}}", f"'{exec_id}'")
+
+    cursor = conn.cursor()
     try:
-        logger.info("📁 Exécution des scripts SQL pour le chargement des données dans la table WRK")
-        execute_sql_folder(conn, SQL_DIR / "wrk", logger, exec_order=exec_order)
-        logger.info("✅ Chargement des données dans la table WRK terminé avec succès.")
+        cursor.execute(content)
+        logger.info(f"✅ Script {file_path.name} exécuté avec succès.")
     except Exception as e:
-        logger.error(f"❌ Échec du chargement des données dans la table WRK : {e}")
+        logger.error(f"❌ Erreur dans {file_path.name} : {e}")
+        raise
+    finally:
+        cursor.close()
+
+def run():
+    """Exécute tous les scripts WRK avec génération de run_id / exec_id."""
+    run_id = datetime.now().strftime("RUN_%Y%m%d_%H%M%S")
+    logger.info(f"🆔 run_id = {run_id}")
+
+    conn = get_connection()
+    try:
+        for file_name in exec_order:
+            file_path = SQL_DIR / file_name
+            if file_path.exists():
+                execute_sql_file_with_exec_id(conn, file_path, run_id, logger)
+            else:
+                logger.warning(f"⚠️ Fichier introuvable : {file_name}")
+        logger.info("✅ Chargement complet WRK terminé.")
+    except Exception as e:
+        logger.error(f"⛔ Échec du chargement WRK : {e}")
         raise
     finally:
         conn.close()
-        logger.info("Connexion à Snowflake fermée.")
-
+        logger.info("🔌 Connexion Snowflake fermée.")
 
 if __name__ == "__main__":
     run()
-
-
-

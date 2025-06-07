@@ -69,7 +69,3 @@ def generer_sql(df:pd.DataFrame, dir_path:str, db_source:str = "BASE_STAGING", d
             
 
 
-if __name__ == "__main__":
-    df = lire_mapping_excel(r"C:\Users\colin\Documents\ETUDE\UTC semestre 4\NF26\Smart-Teem\nf26_smart_teem\Data Hospital\Hopital Mapping VF.xlsx", index_feuille=1)
-    df = filtrer_et_nettoyer(df)
-    generer_sql(df, r"C:\Users\colin\Documents\ETUDE\UTC semestre 4\NF26\Smart-Teem\nf26_smart_teem\sql\_stg_to_wrk")
