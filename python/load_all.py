@@ -1,24 +1,12 @@
-import logging
+
 from pathlib import Path
 from connect import get_connection
 from insert_generic import insert_generic, insert_generic_upgrade
-
-# Définir le dossier "log" et le fichier de log
-log_dir = Path(__file__).resolve().parent / "logs"
-log_file = log_dir / "loader_stg.log"
-
-# S'assurer que le dossier log existe (au cas où)
-log_dir.mkdir(parents=True, exist_ok=True)
+from log_config import get_logger
 
 # Configuration du logger
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s | %(levelname)s | %(message)s',
-    handlers=[
-        logging.StreamHandler(),  # Console
-        logging.FileHandler(log_file, mode='a', encoding='utf-8')  # Fichier dans le dossier "log"
-    ]
-)
+logger = get_logger("loader_stg.log")
+
 
 def load_files_by_date(date_str, conn):
     """Charge les fichiers de données pour une date spécifique dans la base de données.
@@ -29,11 +17,11 @@ def load_files_by_date(date_str, conn):
     base_dir = Path(__file__).resolve().parent.parent / "Data Hospital"
     folder = base_dir / f"BDD_HOSPITAL_{date_str}" #! Utiliser os.path.join pour la portabilité
 
-    logging.info("────────────────────────────────────────────────────────")
-    logging.info(f"🗓️  Début du chargement pour la date : {date_str}")
+    logger.info("────────────────────────────────────────────────────────")
+    logger.info(f"🗓️  Début du chargement pour la date : {date_str}")
 
     if not folder.exists():
-        logging.error(f"Dossier non trouvé : {folder.resolve()}")
+        logger.error(f"Dossier non trouvé : {folder.resolve()}")
         return
 
     for table in ["CHAMBRE", "CONSULTATION", "HOSPITALISATION", "MEDICAMENT", "PATIENT", "PERSONNEL", "TRAITEMENT"]:
@@ -43,7 +31,7 @@ def load_files_by_date(date_str, conn):
             file_path = folder / f"{table}_{date_str}.txt" #! Même chose ici
 
         if file_path.exists():
-            logging.info(f"➡️ Insertion de la table {table} depuis {file_path.name}")
+            logger.info(f"➡️ Insertion de la table {table} depuis {file_path.name}")
             insert_generic_upgrade(file_path, conn, table)
         else:
-            logging.warning(f"⚠️ Fichier {table} manquant : {file_path.name}")
+            logger.warning(f"⚠️ Fichier {table} manquant : {file_path.name}")

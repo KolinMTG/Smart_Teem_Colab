@@ -1,4 +1,5 @@
 from load_all import *
+from connect import get_connection
 
 def main():
     # 🗓 Liste des dates à traiter
@@ -20,7 +21,6 @@ def main():
             load_files_by_date(date_str, conn)
     finally:
         conn.close()
-        logging.info("Connexion Snowflake fermée.")
 
 if __name__ == "__main__":
     main()

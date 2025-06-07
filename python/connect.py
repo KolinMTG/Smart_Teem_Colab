@@ -4,7 +4,7 @@ import snowflake.connector
 
 load_dotenv()
 
-def get_connection():
+def get_connection() -> snowflake.connector.SnowflakeConnection:
     return snowflake.connector.connect(
         user=os.getenv("SNOWFLAKE_USER"),
         password=os.getenv("SNOWFLAKE_PASSWORD"),

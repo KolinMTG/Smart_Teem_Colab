@@ -3,33 +3,16 @@ from pathlib import Path
 from dotenv import load_dotenv
 import snowflake.connector
 import argparse
-import logging
-from datetime import datetime
+from log_config import get_logger
 
+
+SQL_DIR = Path(__file__).resolve().parent.parent / "sql"
 # Chargement des variables d'environnement
 load_dotenv()
 
-# Résolution du chemin absolu du dossier SQL
-SQL_DIR = Path(__file__).resolve().parent.parent / "sql"
-LOG_DIR = Path(__file__).resolve().parent / "logs"
-LOG_DIR.mkdir(exist_ok=True)
+# Configuration du logger
+logger = get_logger("install_sid.log", console=True)
 
-# Fichier de log unique (sans timestamp)
-LOG_FILE = LOG_DIR / "install_sid.log"
-
-# Configuration du logger (mode append par défaut)
-logging.basicConfig(
-    filename=LOG_FILE,
-    level=logging.INFO,
-    format='%(asctime)s | %(levelname)s | %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-
-# Affichage console en plus des logs fichiers
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-console.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s', '%H:%M:%S'))
-logging.getLogger().addHandler(console)
 
 # Ordre des scripts à exécuter
 SCRIPT_ORDER = [
@@ -52,10 +35,10 @@ def connect_to_snowflake() -> snowflake.connector.SnowflakeConnection:
             warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
             role=os.getenv("SNOWFLAKE_ROLE")
         )
-        logging.info("Connexion à Snowflake réussie.")
+        logger.info("Connexion à Snowflake réussie.")
         return conn
     except Exception as e:
-        logging.error(f"Erreur de connexion à Snowflake : {e}")
+        logger.error(f"Erreur de connexion à Snowflake : {e}")
         raise
 
 def execute_sql_file(conn : snowflake.connector.SnowflakeConnection, file_path : str) -> None:
@@ -64,7 +47,7 @@ def execute_sql_file(conn : snowflake.connector.SnowflakeConnection, file_path :
         conn: Connexion à Snowflake.
         file_path: Chemin du fichier SQL à exécuter.
     """
-    logging.info(f"Début d'exécution du script : {file_path.name}")
+    logger.info(f"Début d'exécution du script : {file_path.name}")
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             sql_content = f.read()
@@ -74,31 +57,31 @@ def execute_sql_file(conn : snowflake.connector.SnowflakeConnection, file_path :
             for i, stmt in enumerate(statements, 1):
                 try:
                     cursor.execute(stmt)
-                    logging.info(f"Statement {i}/{len(statements)} exécuté avec succès.")
+                    logger.info(f"Statement {i}/{len(statements)} exécuté avec succès.")
                 except Exception as stmt_error:
-                    logging.error(f"Erreur dans le statement {i}/{len(statements)} : {stmt_error}")
+                    logger.error(f"Erreur dans le statement {i}/{len(statements)} : {stmt_error}")
                     raise
-        logging.info(f"Script terminé avec succès : {file_path.name}")
+        logger.info(f"Script terminé avec succès : {file_path.name}")
     except Exception as e:
-        logging.error(f"Échec du script {file_path.name} avec erreur : {e}")
+        logger.error(f"Échec du script {file_path.name} avec erreur : {e}")
         raise
 
 def run_installation() -> None:
     """ Fonction principale pour exécuter l'installation du SID."""
-    logging.info("=== Début de l'installation du SID médical ===")
+    logger.info("=== Début de l'installation du SID médical ===")
     conn = connect_to_snowflake()
     try:
         for script_name in SCRIPT_ORDER:
             script_path = SQL_DIR / script_name
             if not script_path.exists():
-                logging.warning(f"Le fichier {script_path} n'existe pas, script ignoré.")
+                logger.warning(f"Le fichier {script_path} n'existe pas, script ignoré.")
                 continue
             execute_sql_file(conn, script_path)
-        logging.info("✅ Tous les scripts ont été exécutés avec succès.")
+        logger.info("✅ Tous les scripts ont été exécutés avec succès.")
     finally:
         conn.close()
-        logging.info("Connexion à Snowflake fermée.")
-        logging.info("=== Fin de l'installation ===")
+        logger.info("Connexion à Snowflake fermée.")
+        logger.info("=== Fin de l'installation ===")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Installe le SID médical dans Snowflake.")
