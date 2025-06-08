@@ -1,14 +1,10 @@
--- Insertion dans SUIVI_RUN
-USE DATABASE BASE_TECHNIQUE;
-USE SCHEMA PUBLIC;
 
+-- _insert_t_suiv_run.sql
 INSERT INTO SUIVI_RUN (
     RUN_ID,
     RUN_STRT_DTTM,
     RUN_END_DTTM,
     RUN_STTS_CD
 )
-VALUES (%s, %s, %s, %s);
-
--- Insertion dans SUIVI_TRAITEMENT
+VALUES ('{}', '{}', '{}', '{}');
 

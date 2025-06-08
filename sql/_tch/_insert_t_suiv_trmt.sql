@@ -1,5 +1,3 @@
-USE DATABASE BASE_TECHNIQUE;
-USE SCHEMA PUBLIC;
 
 INSERT INTO SUIVI_TRAITEMENT (
     RUN_ID,
@@ -9,4 +7,4 @@ INSERT INTO SUIVI_TRAITEMENT (
     EXEC_END_DTTM,
     EXEC_STTS_CD
 )
-VALUES (%s, %s, %s, %s, %s, %s);
+VALUES ('{}', '{}', '{}', '{}', '{}', '{}');
