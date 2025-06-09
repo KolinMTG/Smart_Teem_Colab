@@ -3,7 +3,7 @@ INSERT INTO BASE_WORK.PUBLIC.R_PART (
     SRC_ID,
     SRC_TYP
 )
-SELECT *
+SELECT DISTINCT *
 FROM (
     WITH
     combinaison_personnel AS (

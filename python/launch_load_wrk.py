@@ -6,6 +6,8 @@ from connect import get_connection
 from pathlib import Path
 from datetime import datetime
 from suivi_technique import insert_suivi_run, insert_suivi_traitement
+from cleaners import explore_table
+import pandas as pd
 
 # Configuration
 SQL_DIR = Path(__file__).resolve().parent.parent / "sql/_stg_to_wrk"
@@ -63,12 +65,29 @@ def run():
             file_path = SQL_DIR / file_name
             if file_path.exists():
                 execute_sql_file_with_exec_id(conn, file_path, exec_id, run_id, logger)
+
+                # PHASE EXPLORATOIRE INTERMEDIAIRE
+                table_name = file_name.replace("_insert_", "").replace(".sql", "")
+                logger.info(f"🔎 Exploration de la table {table_name}")
+
+                query = f"SELECT * FROM BASE_WORK.PUBLIC.{table_name.upper()} LIMIT 10000"
+
+                cursor = conn.cursor()
+                try:
+                    cursor.execute(query)
+                    data = cursor.fetchall()
+                    columns = [desc[0] for desc in cursor.description]
+                    df_wrk = pd.DataFrame(data, columns=columns)
+                finally:
+                    cursor.close()
+
+                # Appel de cleaners
+                explore_table(df_wrk, table_name)
+
                 exec_id += 1
             else:
                 logger.warning(f"⚠️ Fichier introuvable : {file_name}")
-        run_end = datetime.now()
-        insert_suivi_run(conn, run_id, run_start, run_end, "OK")
-        logger.info("✅ Chargement complet WRK terminé.")
+
     except Exception as e:
         run_end = datetime.now()
         insert_suivi_run(conn, run_id, run_start, run_end, "KO")
