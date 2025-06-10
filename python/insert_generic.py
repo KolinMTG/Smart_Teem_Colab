@@ -52,9 +52,11 @@ def insert_generic(file_path, conn, table_name):
 
         headers = lines[0].strip().split(";")[1:]
         data = lines[1:]
+
         expected_cols = len(headers)
         placeholders = ", ".join(["%s"] * expected_cols)
         insert_query = f"INSERT INTO {table_name} ({', '.join(headers)}) VALUES ({placeholders})"
+
 
         with conn.cursor() as cursor:
             cursor.execute("USE WAREHOUSE COMPUTE_WH")
@@ -123,6 +125,13 @@ def insert_generic_upgrade(file_path, conn, table_name, stage_name="@my_internal
 
         headers = lines[0].strip().split(";")[1:]  # skip 1ère colonne type ID
         data = lines[1:]
+        # Supprimer ID_TRAITEMENT si table "consultation"
+        idx_to_remove = None
+        if table_name.lower() == "consultation":
+            if "ID_TRAITEMENT" in headers:
+                idx_to_remove = headers.index("ID_TRAITEMENT")
+                headers.pop(idx_to_remove)
+
         expected_cols = len(headers)
         timestamp_cols = [i for i, h in enumerate(headers) if h.startswith("TS_")]
 
@@ -135,6 +144,9 @@ def insert_generic_upgrade(file_path, conn, table_name, stage_name="@my_internal
             for i, line in enumerate(data, 1):
                 print(f"Traitement de la ligne {i} dans {table_name}...")
                 values = line.strip().split(";")[1:]  # skip colonne 0
+                # Supprimer la colonne ID_TRAITEMENT si nécessaire
+                if idx_to_remove is not None:
+                    values.pop(idx_to_remove)
 
                 if not values or values[0].startswith("ID_"):
                     logging.warning(f"[{table_name}] 🟡 Ligne {i} ignorée (entête ou vide)")
