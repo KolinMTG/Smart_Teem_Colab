@@ -8,6 +8,9 @@ from suivi_technique import insert_suivi_run, insert_suivi_traitement
 from launch_load_wrk import *
 from profiling_runner import *
 from launch_load_soc import *
+from launch_create_views import run_create_views
+
+
 
 def run_etl_pipeline(dates: list[str]):
     ################################################################
@@ -176,3 +179,4 @@ if __name__ == "__main__":
         "20240505", "20240506", "20240507", "20240508"
     ]
     run_etl_pipeline(dates)
+    run_create_views()
