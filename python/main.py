@@ -1,182 +1,179 @@
 from connect import get_connection
-from install_sid import *
-from load_all import *
+from install_sid import run_installation
+from load_all import load_files_by_date
 from log_config import get_logger
 from pathlib import Path
 from datetime import datetime
-from suivi_technique import insert_suivi_run, insert_suivi_traitement
-from launch_load_wrk import *
-from profiling_runner import *
-from launch_load_soc import *
+from suivi_technique import (
+    insert_suivi_run,
+    insert_suivi_traitement,
+    update_suivi_traitement,
+    get_next_exec_id
+)
+from launch_load_wrk import WRK_SCRIPTS, SQL_DIR as WRK_DIR, execute_sql_file, explore_table_after_script
+from launch_load_soc import execute_sql_file as execute_sql_soc
+from dotenv import load_dotenv
 from launch_create_views import run_create_views
+from export_views_csv import export_views_to_csv
 
+SOC_SCRIPTS = [
+    "_insert_party.sql",
+    "_insert_room.sql",
+    "_insert_medicine.sql",
+    "_insert_individual.sql",
+    "_insert_staff.sql",
+    "_insert_telephone.sql",
+    "_insert_address.sql",
+    "_insert_treatment.sql",
+    "_insert_consultation.sql",
+    "_insert_hospitalization.sql"
+]
 
+# Emplacements des dossiers SQL et des scripts de réinitialisation
+SOC_DIR = Path(__file__).resolve().parent.parent / "sql/_wrk_to_soc"
+REINIT_STG = Path(__file__).resolve().parent.parent / "sql/_reinitialisation/_reinit_stg.sql"
+REINIT_WRK = Path(__file__).resolve().parent.parent / "sql//_reinitialisation/_reinit_wrk.sql"
+REINIT_DB = Path(__file__).resolve().parent.parent / "sql//_reinitialisation/drop_databases.sql"
 
-def run_etl_pipeline(dates: list[str]):
-    ################################################################
-
-    # 0. Connexion à Snowflake
-
-    # Chargement des variables d'environnement
+def run_etl_pipeline(dates: list[str]) -> None:
     load_dotenv()
-    # Connexion
-    conn = get_connection()
+    logger = get_logger("etl.log", console=True)
 
+    # Étape 0 : réinitialisation complète des bases (DROP + CREATE)
+    conn_init = get_connection()
+    sql_db   = REINIT_DB.read_text(encoding="utf-8")
+    logger.info("Réinitialisation complète des bases DROP")
 
-    ################################################################
-
-    # 1. Création des tables STG, WRK, SOC, TCH
-
-    # Configuration du logger
-    logger = get_logger("install_sid.log", console=True)
-
-    # Ordre des scripts à exécuter
-    SCRIPT_ORDER = [
-        "01_create_databases.sql",
-        "02_create_stg_tables.sql",
-        "03_create_wrk_tables.sql",
-        "04_create_tch_tables.sql",
-        "05_create_soc_tables.sql"
-    ]
-
-    # Création des tables
-    parser = argparse.ArgumentParser(description="Installe le SID médical dans Snowflake.")
-    args = parser.parse_args()
-    run_installation()
-
-
-    ################################################################
-
-    # 2. Enrichissement de la table STG
-
-    for date_str in dates:
-        load_files_by_date(date_str, conn)
-
-
-    ################################################################
-
-    # 3. Enrichissement de la table WRK
-    # Configuration
-    SQL_DIR = Path(__file__).resolve().parent.parent / "sql/_stg_to_wrk"
-    logger = get_logger("load_wrk.log", console=True)
-
-    # Exécution des scripts dans cet ordre
-    exec_order = [
-        "_insert_r_room.sql",
-        "_insert_r_part.sql",
-        "_insert_r_medc.sql",
-        "_insert_o_tret.sql",
-        "_insert_o_indv.sql",
-        "_insert_o_stff.sql",
-        "_insert_o_telp.sql",
-        "_insert_o_addr.sql",
-        "_insert_o_cons.sql",
-        "_insert_o_hosp.sql"
-    ]
-
-    """Exécute tous les scripts WRK avec génération de run_id / exec_id et suivi technique."""
-    run_id = int(datetime.now().strftime("%Y%m%d%H%M%S"))
-    run_start = datetime.now()
-    logger.info(f"🆔 run_id = {run_id}")
-
-    try:
-        exec_id = 1
-        for file_name in exec_order:
-            file_path = SQL_DIR / file_name
-            if file_path.exists():
-                execute_sql_file_with_exec_id(conn, file_path, exec_id, run_id, logger)
-
-                # PHASE EXPLORATOIRE INTERMEDIAIRE
-                table_name = file_name.replace("_insert_", "").replace(".sql", "")
-                logger.info(f"🔎 Exploration de la table {table_name}")
-
-                query = f"SELECT * FROM BASE_WORK.PUBLIC.{table_name.upper()} LIMIT 10000"
-
-                cursor = conn.cursor()
-                try:
-                    cursor.execute(query)
-                    data = cursor.fetchall()
-                    columns = [desc[0] for desc in cursor.description]
-                    df_wrk = pd.DataFrame(data, columns=columns)
-                finally:
-                    cursor.close()
-
-                # Appel de cleaners
-                explore_table(df_wrk, table_name)
-
-                exec_id += 1
-            else:
-                logger.warning(f"⚠️ Fichier introuvable : {file_name}")
-
-    except Exception as e:
-        run_end = datetime.now()
-        insert_suivi_run(conn, run_id, run_start, run_end, "KO")
-        logger.error(f"⛔ Échec du chargement WRK : {e}")
-        raise
-
-
-    # Cleaning des données
-    '''
-    pd.set_option("display.max_rows", None)
-    pd.set_option("display.max_columns", None)
+    # On split sur ';' et on exécute chaque bloc non vide
+    cursor = conn_init.cursor()
+    for stmt in sql_db.split(';'):
+        stmt = stmt.strip()
+        if not stmt:
+            continue
+        logger.debug(f"▶️ Exécution SQL:\n{stmt[:50]}...")  # log de début de stmt
+        cursor.execute(stmt)
+    cursor.close()
+    conn_init.close()
     
-    logger = get_logger("profiling.log", log_level=logging.INFO, console=True)
-    logger.info("Connection to Snowflake successful.")
-    run_sql_script(conn, "../sql/profiling_wrk_complet.sql")
-    '''
+    # Étape 1 : installation de la SID (exécutée une seule fois pour créer toutes les databases)
+    logger.info("=== Début de l'installation SID globale ===")
+    run_installation()
+    logger.info("=== Installation SID terminée ===")
 
-    ################################################################
+    # Boucle principale : traiter chaque date indépendamment
+    for date_str in dates:
+        conn = get_connection()
+        # Générer un identifiant unique pour ce run à partir de la date/heure
+        run_id = int(datetime.now().strftime("%Y%m%d%H%M%S"))
+        run_start = datetime.now()
+        status = "OK"
+        logger.info(f"--- Date {date_str} | run_id {run_id} ---")
 
-    # 4. Enrichissement de la table SOC
+        try:
+        # Étape 2 : réinitialiser les tables de staging afin d'avoir les données de un seul jour à chaque fois
+            sql_stg = REINIT_STG.read_text(encoding="utf-8")
+            logger.info("Réinitialisation des tables STAGING")
+            cur = conn.cursor()
+            stmts = [s.strip() for s in sql_stg.split(';') if s.strip()]
+            for i, stmt in enumerate(stmts, start=1):
+                logger.info(f"  • STG stmt {i}/{len(stmts)}")
+                cur.execute(stmt)
+            cur.close()
 
-    # Configuration
-    SQL_DIR = Path(__file__).resolve().parent.parent / "sql/_wrk_to_soc"
-    logger = get_logger("load_soc.log", console=True)
+            # Étape 3 : charger les fichiers bruts dans STAGING
+            load_files_by_date(date_str, conn)
 
-    # Ordre d'exécution (respecter les dépendances fonctionnelles)
-    exec_order = [
-        "_insert_party.sql",
-        "_insert_room.sql",
-        "_insert_medicine.sql",
-        "_insert_individual.sql",
-        "_insert_staff.sql",
-        "_insert_telephone.sql",
-        "_insert_address.sql",
-        "_insert_treatment.sql",
-        "_insert_consultation.sql",
-        "_insert_hospitalization.sql"
-    ]
+            # Étape 4 : réinitialiser les tables de la couche WORK
+            
+            sql_wrk = REINIT_WRK.read_text(encoding="utf-8")
+            logger.info("Réinitialisation des tables WRK")
+            cur = conn.cursor()
+            stmts = [s.strip() for s in sql_stg.split(';') if s.strip()]
+            for i, stmt in enumerate(stmts, start=1):
+                logger.info(f"  • WRK stmt {i}/{len(stmts)}")
+                cur.execute(stmt)
+            cur.close()
 
-    """Exécute les scripts WRK → SOC avec suivi technique."""
-    run_id = int(datetime.now().strftime("%Y%m%d%H%M%S"))
-    run_start = datetime.now()
-    logger.info(f"🆔 run_id = {run_id}")
+            # Étape 5 : exécuter les scripts WRK avec suivi et exploration des valeurs
+            exec_id = get_next_exec_id(conn)
+            for file_name in WRK_SCRIPTS:
+                file_path = WRK_DIR / file_name
+                if not file_path.exists():
+                    logger.warning(f"Fichier manquant WRK : {file_name}")
+                    continue
 
-    conn = get_connection()
-    try:
-        exec_id = 1
-        for file_name in exec_order:
-            file_path = SQL_DIR / file_name
-            if file_path.exists():
-                execute_sql_file_with_exec_id(conn, file_path, exec_id, run_id, logger)
+                content = file_path.read_text(encoding="utf-8").replace("%s", f"'{exec_id}'")
+                script_start = datetime.now()
+                insert_suivi_traitement(conn, run_id, exec_id, file_name, script_start, "ENC")
+
+                try:
+                    execute_sql_file(conn, content, logger, file_name)
+                    status_script = "OK"
+                except Exception as e:
+                    status_script = "KO"
+                    logger.error(f"❌ Erreur {file_name} : {e}")
+                    raise
+                finally:
+                    script_end = datetime.now()
+                    update_suivi_traitement(conn, run_id, exec_id, script_end, status_script)
+
+                explore_table_after_script(conn, file_name, logger)
                 exec_id += 1
-            else:
-                logger.warning(f"⚠️ Fichier introuvable : {file_name}")
 
-        run_end = datetime.now()
-        insert_suivi_run(conn, run_id, run_start, run_end, "OK")
+            # Étape 6 : exécuter les scripts SOC avec suivi
+            for file_name in SOC_SCRIPTS:
+                file_path = SOC_DIR / file_name
+                if not file_path.exists():
+                    logger.warning(f"Fichier manquant SOC : {file_name}")
+                    continue
 
-    except Exception as e:
-        run_end = datetime.now()
-        insert_suivi_run(conn, run_id, run_start, run_end, "KO")
-        logger.error(f"⛔ Échec du chargement SOC : {e}")
-        raise
+                content = file_path.read_text(encoding="utf-8").replace("%s", f"'{exec_id}'")
+                script_start = datetime.now()
+                insert_suivi_traitement(conn, run_id, exec_id, file_name, script_start, "ENC")
+
+                try:
+                    execute_sql_soc(conn, content, logger, file_name)
+                    status_script = "OK"
+                except Exception as e:
+                    status_script = "KO"
+                    logger.error(f"❌ Erreur {file_name} : {e}")
+                    raise
+                finally:
+                    script_end = datetime.now()
+                    update_suivi_traitement(conn, run_id, exec_id, script_end, status_script)
+
+                exec_id += 1
+
+        except Exception as e:
+            status = "KO"
+            logger.error(f"❌ Erreur sur {date_str} : {e}")
+            raise
+        finally:
+            run_end = datetime.now()
+            insert_suivi_run(conn, run_id, run_start, run_end, status)
+            conn.close()
+
 
 if __name__ == "__main__":
     dates = [
-        "20240429", "20240430", "20240501",
-        "20240502", "20240503", "20240504",
-        "20240505", "20240506", "20240507", "20240508"
+        "20240429", "20240430", "20240501", "20240502",
+        "20240503", "20240504", "20240505", "20240506",
+        "20240507", "20240508"
     ]
     run_etl_pipeline(dates)
+    #créer les vues et exporter en csv
     run_create_views()
+    views = [
+        "VW_AVG_AGE_BY_PATHOLOGY",
+        "VW_TOP_MEDICATION_BY_PATHOLOGY",
+        "VW_ROOMS_BY_PATHOLOGY",
+        "VW_DOCTOR_SPECIALTY_BY_PATHOLOGY",
+        "VW_PATIENTS_ONE_NIGHT",
+        "VW_EMPTY_ROOMS"
+    ]
+    export_views_to_csv(
+        views=views,
+        database="BASE_SOCLE",
+        schema="PUBLIC",
+        output_dir="csv"
+    )

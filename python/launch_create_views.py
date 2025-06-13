@@ -39,7 +39,7 @@ def run_create_views():
             with open(file_path, "r", encoding="utf-8") as f:
                 sql_query = f.read()
 
-            logger.info(f"📄 Création de la vue : {view_name}")
+            logger.info(f"Création de la vue : {view_name}")
             try:
                 cursor.execute(sql_query)
                 logger.info(f"✅ Vue {view_name} créée avec succès.")
@@ -49,5 +49,5 @@ def run_create_views():
     finally:
         cursor.close()
         conn.close()
-        logger.info("🔚 Connexion Snowflake fermée.")
+        logger.info("Connexion Snowflake fermée.")
 

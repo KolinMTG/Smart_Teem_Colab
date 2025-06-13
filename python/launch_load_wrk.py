@@ -1,20 +1,11 @@
-# Script de chargement des données pour la table WRK
-"""Fichier d'exécution des scripts SQL pour le chargement des données dans la table WRK avec suivi technique."""
-
 from log_config import get_logger
-from connect import get_connection
 from pathlib import Path
-from datetime import datetime
-from suivi_technique import insert_suivi_run, insert_suivi_traitement
 from cleaners import explore_table
 import pandas as pd
 
-# Configuration
 SQL_DIR = Path(__file__).resolve().parent.parent / "sql/_stg_to_wrk"
-logger = get_logger("load_wrk.log", console=True)
 
-# Exécution des scripts dans cet ordre
-exec_order = [
+WRK_SCRIPTS = [
     "_insert_r_room.sql",
     "_insert_r_part.sql",
     "_insert_r_medc.sql",
@@ -27,76 +18,26 @@ exec_order = [
     "_insert_o_hosp.sql"
 ]
 
-def execute_sql_file_with_exec_id(conn, file_path, exec_id: int, run_id: int, logger):
-    """Lit, remplace %s, exécute le fichier SQL et insère le suivi du traitement."""
-    with open(file_path, encoding="utf-8") as f:
-        content = f.read()
-
-    logger.info(f"▶️ Exécution du script : {file_path.name} avec exec_id = {exec_id}")
-
-    # Remplacement de l'placeholder dans le fichier
-    content = content.replace("%s", f"'{exec_id}'")
-
-    script_start = datetime.now()
+def execute_sql_file(conn, content: str, logger, file_name: str):
+    logger.info(f"▶️ Script {file_name}")
     cursor = conn.cursor()
     try:
         cursor.execute(content)
-        logger.info(f"✅ Script {file_path.name} exécuté avec succès.")
-        script_end = datetime.now()
-        insert_suivi_traitement(conn, run_id, exec_id, file_path.name, script_start, script_end, "OK")
-    except Exception as e:
-        script_end = datetime.now()
-        insert_suivi_traitement(conn, run_id, exec_id, file_path.name, script_start, script_end, "KO")
-        logger.error(f"❌ Erreur dans {file_path.name} : {e}")
-        raise
+        logger.info(f"✅ Succès : {file_name}")
     finally:
         cursor.close()
 
-def run():
-    """Exécute tous les scripts WRK avec génération de run_id / exec_id et suivi technique."""
-    run_id = int(datetime.now().strftime("%Y%m%d%H%M%S"))
-    run_start = datetime.now()
-    logger.info(f"🆔 run_id = {run_id}")
+def explore_table_after_script(conn, file_name: str, logger):
+    table_name = file_name.replace("_insert_", "").replace(".sql", "")
+    logger.info(f"🔎 Exploration table {table_name}")
+    query = f"SELECT * FROM BASE_WORK.PUBLIC.{table_name.upper()} LIMIT 10000"
 
-    conn = get_connection()
+    cursor = conn.cursor()
     try:
-        exec_id = 1
-        for file_name in exec_order:
-            file_path = SQL_DIR / file_name
-            if file_path.exists():
-                execute_sql_file_with_exec_id(conn, file_path, exec_id, run_id, logger)
-
-                # PHASE EXPLORATOIRE INTERMEDIAIRE
-                table_name = file_name.replace("_insert_", "").replace(".sql", "")
-                logger.info(f"🔎 Exploration de la table {table_name}")
-
-                query = f"SELECT * FROM BASE_WORK.PUBLIC.{table_name.upper()} LIMIT 10000"
-
-                cursor = conn.cursor()
-                try:
-                    cursor.execute(query)
-                    data = cursor.fetchall()
-                    columns = [desc[0] for desc in cursor.description]
-                    df_wrk = pd.DataFrame(data, columns=columns)
-                finally:
-                    cursor.close()
-
-                # Appel de cleaners
-                explore_table(df_wrk, table_name)
-
-                exec_id += 1
-            else:
-                logger.warning(f"⚠️ Fichier introuvable : {file_name}")
-
-    except Exception as e:
-        run_end = datetime.now()
-        insert_suivi_run(conn, run_id, run_start, run_end, "KO")
-        logger.error(f"⛔ Échec du chargement WRK : {e}")
-        raise
+        cursor.execute(query)
+        data = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        df = pd.DataFrame(data, columns=columns)
+        explore_table(df, table_name)
     finally:
-        conn.close()
-        logger.info("🔌 Connexion Snowflake fermée.")
-
-if __name__ == "__main__":
-    run()
-  
+        cursor.close()
