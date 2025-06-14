@@ -10,6 +10,7 @@ from suivi_technique import (
     update_suivi_traitement,
     get_next_exec_id
 )
+from reinit_stg_wrk import reinit_stg_and_wrk
 from launch_load_wrk import WRK_SCRIPTS, SQL_DIR as WRK_DIR, execute_sql_file, explore_table_after_script
 from launch_load_soc import execute_sql_file as execute_sql_soc
 from dotenv import load_dotenv
@@ -66,14 +67,14 @@ def run_etl_pipeline(dates: list[str]) -> None:
         # Elle crée toutes les bases de données (STG, WRK, SOC, TCH) ainsi que les tables associées.
         # Lors des exécutions suivantes, seules les tables des zones STG et WRK sont supprimées puis recréées.
         # Les tables des zones SOC et TCH, elles, ne sont pas recréées si elles existent déjà.
-        if not already_installed:
+       if not already_installed:
             logger.info("=== Installation complète de la SID (bases + tables) ===")
             run_installation()
             already_installed = True
             logger.info("=== SID installée avec succès ===")
         else:
-            logger.info("=== SID déjà installée : réinitialisation des bases (supprimer et recréer les tables STG et WRK)===")
-            run_installation()
+            logger.info("=== SID déjà installée : on réinitialise STG et WRK ===")
+            reinit_stg_and_wrk()
 
 
         # Générer un identifiant unique pour ce run à partir de la date/heure
