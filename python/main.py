@@ -67,7 +67,7 @@ def run_etl_pipeline(dates: list[str]) -> None:
         # Elle crée toutes les bases de données (STG, WRK, SOC, TCH) ainsi que les tables associées.
         # Lors des exécutions suivantes, seules les tables des zones STG et WRK sont supprimées puis recréées.
         # Les tables des zones SOC et TCH, elles, ne sont pas recréées si elles existent déjà.
-       if not already_installed:
+        if not already_installed:
             logger.info("=== Installation complète de la SID (bases + tables) ===")
             run_installation()
             already_installed = True
