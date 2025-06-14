@@ -17,7 +17,8 @@ SELECT DISTINCT
     p.PRENOM_PERSONNEL AS INDV_FIRS_NAME,
     p.CD_STATUT_PERSONNEL AS INDV_STTS_CD,
     p.TS_CREATION_PERSONNEL AS CRTN_DTTM,
-    p.TS_MAJ_PERSONNEL AS UPDT_DTTM,
+    %time_now AS UPDT_DTTM, -- Attention cette colonne est modifiée et prend la valeur now() lors de l'insertion
+    -- p.TS_MAJ_PERSONNEL AS UPDT_DTTM,
     NULL AS BIRT_DT,
     NULL AS BIRT_CITY,
     NULL AS BIRT_CNTR,

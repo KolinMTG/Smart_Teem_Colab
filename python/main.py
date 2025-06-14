@@ -38,6 +38,7 @@ REINIT_DB = Path(__file__).resolve().parent.parent / "sql//_reinitialisation/dro
 def run_etl_pipeline(dates: list[str]) -> None:
     load_dotenv()
     logger = get_logger("etl.log", console=True)
+    ts_maj_personnel = datetime.now().replace(microsecond=0)
 
     # Étape 0 : réinitialisation complète des bases (DROP + CREATE)
     conn_init = get_connection()
@@ -100,6 +101,7 @@ def run_etl_pipeline(dates: list[str]) -> None:
                     continue
 
                 content = file_path.read_text(encoding="utf-8").replace("%s", f"'{exec_id}'")
+                content = content.replace("%time_now",  f"'{ts_maj_personnel}'")
                 script_start = datetime.now()
                 insert_suivi_traitement(conn, run_id, exec_id, file_name, script_start, "ENC")
 
@@ -162,6 +164,7 @@ if __name__ == "__main__":
         "20240503", "20240504", "20240505", "20240506",
         "20240507", "20240508"
     ]
+    dates = ["20240429"]
     run_etl_pipeline(dates)
     #créer les vues et exporter en csv
     run_create_views()
