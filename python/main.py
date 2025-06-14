@@ -55,14 +55,26 @@ def run_etl_pipeline(dates: list[str]) -> None:
     cursor.close()
     conn_init.close()
     
-    # Étape 1 : installation de la SID (exécutée une seule fois pour créer toutes les databases)
-    logger.info("=== Début de l'installation SID globale ===")
-    run_installation()
-    logger.info("=== Installation SID terminée ===")
+    # Nouvelle variable de contrôle pour exécuter run_installation() une seule fois
+    already_installed = False
 
     # Boucle principale : traiter chaque date indépendamment
     for date_str in dates:
         conn = get_connection()
+        # Étape d'installation de la SID : exécutée uniquement lors de la première exécution du pipeline.
+        # Elle crée toutes les bases de données (STG, WRK, SOC, TCH) ainsi que les tables associées.
+        # Lors des exécutions suivantes, seules les tables des zones STG et WRK sont supprimées puis recréées.
+        # Les tables des zones SOC et TCH, elles, ne sont pas recréées si elles existent déjà.
+        if not already_installed:
+            logger.info("=== Installation complète de la SID (bases + tables) ===")
+            run_installation()
+            already_installed = True
+            logger.info("=== SID installée avec succès ===")
+        else:
+            logger.info("=== SID déjà installée : réinitialisation des bases (supprimer et recréer les tables STG et WRK)===")
+            run_installation()
+
+
         # Générer un identifiant unique pour ce run à partir de la date/heure
         run_id = int(datetime.now().strftime("%Y%m%d%H%M%S"))
         run_start = datetime.now()
@@ -70,29 +82,14 @@ def run_etl_pipeline(dates: list[str]) -> None:
         logger.info(f"--- Date {date_str} | run_id {run_id} ---")
 
         try:
-        # Étape 2 : réinitialiser les tables de staging afin d'avoir les données de un seul jour à chaque fois
-            sql_stg = REINIT_STG.read_text(encoding="utf-8")
-            logger.info("Réinitialisation des tables STAGING")
-            cur = conn.cursor()
-            stmts = [s.strip() for s in sql_stg.split(';') if s.strip()]
-            for i, stmt in enumerate(stmts, start=1):
-                logger.info(f"  • STG stmt {i}/{len(stmts)}")
-                cur.execute(stmt)
-            cur.close()
-
             # Étape 3 : charger les fichiers bruts dans STAGING
+            logger.info("=== Début du chargement des fichiers bruts dans STAGING ===")
             load_files_by_date(date_str, conn)
+            logger.info("✅ Fichiers chargés dans STAGING pour la date : " + date_str)
 
-            # Étape 4 : réinitialiser les tables de la couche WORK
-            
-            sql_wrk = REINIT_WRK.read_text(encoding="utf-8")
-            logger.info("Réinitialisation des tables WRK")
-            cur = conn.cursor()
-            stmts = [s.strip() for s in sql_stg.split(';') if s.strip()]
-            for i, stmt in enumerate(stmts, start=1):
-                logger.info(f"  • WRK stmt {i}/{len(stmts)}")
-                cur.execute(stmt)
-            cur.close()
+
+            logger.info("=== Début du passage STG ➜ WRK ===")
+
 
             # Étape 5 : exécuter les scripts WRK avec suivi et exploration des valeurs
             exec_id = get_next_exec_id(conn)
@@ -119,8 +116,11 @@ def run_etl_pipeline(dates: list[str]) -> None:
 
                 explore_table_after_script(conn, file_name, logger)
                 exec_id += 1
+            
+            logger.info("=== Fin du passage STG ➜ WRK ===")
 
             # Étape 6 : exécuter les scripts SOC avec suivi
+            logger.info("=== Début du passage WRK ➜ SOC ===")
             for file_name in SOC_SCRIPTS:
                 file_path = SOC_DIR / file_name
                 if not file_path.exists():
@@ -143,6 +143,7 @@ def run_etl_pipeline(dates: list[str]) -> None:
                     update_suivi_traitement(conn, run_id, exec_id, script_end, status_script)
 
                 exec_id += 1
+            logger.info("✅ Fin du passage WRK ➜ SOC")
 
         except Exception as e:
             status = "KO"
@@ -151,6 +152,7 @@ def run_etl_pipeline(dates: list[str]) -> None:
         finally:
             run_end = datetime.now()
             insert_suivi_run(conn, run_id, run_start, run_end, status)
+            
             conn.close()
 
 
