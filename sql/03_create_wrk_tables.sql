@@ -50,7 +50,7 @@ CREATE TABLE O_INDV (
     INDV_FIRS_NAME VARCHAR(100) NOT NULL,
     INDV_STTS_CD VARCHAR(10) NOT NULL,
     CRTN_DTTM TIMESTAMP(0) NOT NULL,
-    UPDT_DTTM TIMESTAMP(0), --a modifier pour mettre not null quand colin aura regle le probleme 
+    UPDT_DTTM TIMESTAMP(0) NOT NULL, --a modifier pour mettre not null quand colin aura regle le probleme 
     BIRT_DT DATE,
     BIRT_CITY VARCHAR(100),
     BIRT_CNTR VARCHAR(100),
