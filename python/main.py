@@ -16,6 +16,7 @@ from launch_load_soc import execute_sql_file as execute_sql_soc
 from dotenv import load_dotenv
 from launch_create_views import run_create_views
 from export_views_csv import export_views_to_csv
+import sys
 
 SOC_SCRIPTS = [
     "_insert_party.sql",
@@ -36,7 +37,7 @@ REINIT_STG = Path(__file__).resolve().parent.parent / "sql/_reinitialisation/_re
 REINIT_WRK = Path(__file__).resolve().parent.parent / "sql//_reinitialisation/_reinit_wrk.sql"
 REINIT_DB = Path(__file__).resolve().parent.parent / "sql//_reinitialisation/drop_databases.sql"
 
-def run_etl_pipeline(dates: list[str]) -> None:
+def run_etl_pipeline(dates: list[str], run_id_dag: str=None, already_installed: bool=False) -> None:
     load_dotenv()
     logger = get_logger("etl.log", console=True)
     ts_maj_personnel = datetime.now().replace(microsecond=0)
@@ -58,7 +59,7 @@ def run_etl_pipeline(dates: list[str]) -> None:
     conn_init.close()
     
     # Nouvelle variable de contrôle pour exécuter run_installation() une seule fois
-    already_installed = False
+    #already_installed = False # Variable passée en paramètre avec la même valeur par défaut
 
     # Boucle principale : traiter chaque date indépendamment
     for date_str in dates:
@@ -78,7 +79,11 @@ def run_etl_pipeline(dates: list[str]) -> None:
 
 
         # Générer un identifiant unique pour ce run à partir de la date/heure
-        run_id = int(datetime.now().strftime("%Y%m%d%H%M%S"))
+        if run_id_dag != None: # Si run_id est passé en paramètre, cela signifie que la fonction
+            # est appelée par le DAG. Dans ce cas, une seule date est passée en paramètre.
+            run_id = run_id_dag
+        else:
+            run_id = str(int(datetime.now().strftime("%Y%m%d%H%M%S"))) # type de run_id modifié au format string pour récupérer le run_id du DAG
         run_start = datetime.now()
         status = "OK"
         logger.info(f"--- Date {date_str} | run_id {run_id} ---")
@@ -160,26 +165,69 @@ def run_etl_pipeline(dates: list[str]) -> None:
 
 
 if __name__ == "__main__":
-    dates = [
-        "20240429", "20240430", "20240501", "20240502",
-        "20240503", "20240504", "20240505", "20240506",
-        "20240507", "20240508"
-    ]
-    dates = ["20240429"]
-    run_etl_pipeline(dates)
-    #créer les vues et exporter en csv
-    run_create_views()
-    views = [
-        "VW_AVG_AGE_BY_PATHOLOGY",
-        "VW_TOP_MEDICATION_BY_PATHOLOGY",
-        "VW_ROOMS_BY_PATHOLOGY",
-        "VW_DOCTOR_SPECIALTY_BY_PATHOLOGY",
-        "VW_PATIENTS_ONE_NIGHT",
-        "VW_EMPTY_ROOMS"
-    ]
-    export_views_to_csv(
-        views=views,
-        database="BASE_SOCLE",
-        schema="PUBLIC",
-        output_dir="csv"
-    )
+
+    # Le fichier est exécuté manuellement
+    if len(sys.argv) == 1:
+        dates = [
+            "20240429", "20240430", "20240501", "20240502",
+            "20240503", "20240504", "20240505", "20240506",
+            "20240507", "20240508"
+        ]
+        dates = ["20240429"]
+        run_etl_pipeline(dates)
+        #créer les vues et exporter en csv
+        run_create_views()
+        views = [
+            "VW_AVG_AGE_BY_PATHOLOGY",
+            "VW_TOP_MEDICATION_BY_PATHOLOGY",
+            "VW_ROOMS_BY_PATHOLOGY",
+            "VW_DOCTOR_SPECIALTY_BY_PATHOLOGY",
+            "VW_PATIENTS_ONE_NIGHT",
+            "VW_EMPTY_ROOMS"
+        ]
+        export_views_to_csv(
+            views=views,
+            database="BASE_SOCLE",
+            schema="PUBLIC",
+            output_dir="csv"
+        )
+
+    # Le fichier est exécuté par le DAG de chargement
+    elif len(sys.argv) == 4:
+
+        # Gestion des arguments passés en ligne de commande
+        print("Liste des arguments :", sys.argv)
+
+        # Est-ce que le run_id reçu est le run_id du DAG ou son timestamp ?
+        already_installed = False
+        if eval(sys.argv[3]): # True si on a le run_id
+            run_id: str = sys.argv[2]
+            print(f"Paramètres de run_etl_pipeline (avec le 'run_id' du DAG) : {[sys.argv[1]]}, {run_id}, {already_installed}")
+        else:
+            run_id: str = str(int(datetime.fromisoformat(sys.argv[2]).strftime('%Y%m%d%H%M%S')))
+            print(f"Paramètres de run_etl_pipeline (avec le 'ts' du DAG) : {[sys.argv[1]]}, {run_id}, {already_installed}")
+
+        # Chargement d'un jour dans la base de données
+        run_etl_pipeline([sys.argv[1]], run_id, already_installed)
+
+    # Mauvais nombre d'arguments
+    else:
+        print("Erreur : mauvais nombre d'arguments.")
+        sys.exit(0)
+
+def obtenir_date(date_str_param: str):
+    try:
+        # On tente de parser la chaîne au format AAAAMMJJ
+        datetime.strptime(date_str_param, "%Y%m%d")
+    except ValueError:    
+        # Arrêt du programme
+        raise AirflowException("Date renseignée invalide (format : AAAAMMJJ).") # Ajout d'un message à l'exception
+    return date_str_param
+
+def obtenir_run_id(timestamp: str, dag_run_id: str):
+    if USE_DAG_RUN_ID:
+        run_id = dag_run_id
+    else:
+        # Reformatter le timestamp en "%Y%m%d%H%M%S"
+        run_id = datetime.fromisoformat(timestamp).strftime("%Y%m%d%H%M%S")
+    return run_id
