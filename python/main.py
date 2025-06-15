@@ -214,5 +214,7 @@ if __name__ == "__main__":
 
     # Mauvais nombre d'arguments
     else:
+
+        # Affichage et arrêt du programme
         print("Erreur : mauvais nombre d'arguments.")
         sys.exit(0)

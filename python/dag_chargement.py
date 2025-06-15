@@ -68,5 +68,5 @@ tache_2 = BashOperator(
     bash_command=f'python {dossier_dag} ' + '{{ dag_run.conf.get("date_str", "valeur_par_defaut") }} {{ ts }}'
 )
 
-# --- Définition de l'ordre d'exécution ---
+# Définition de l'ordre d'exécution
 tache_debut >> tache_1 >> tache_2 >> tache_fin

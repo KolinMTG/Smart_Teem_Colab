@@ -54,5 +54,5 @@ tache_2 = BashOperator(
     bash_command=f"python {dossier_dag}",
 )
 
-# --- Définition de l'ordre d'exécution ---
+# Définition de l'ordre d'exécution
 tache_debut >> tache_1 >> tache_2 >> tache_fin
