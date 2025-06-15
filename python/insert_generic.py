@@ -194,6 +194,10 @@ def insert_generic_upgrade(file_path, conn, table_name, stage_name="@my_internal
 
         logging.info(f"[{table_name}] ✅ {inserted} lignes insérées via COPY INTO.")
 
+        if inserted == 0:
+            logging.error(f"[{table_name}] ❌ Aucune ligne insérée (fichier CSV vide ou invalide) !")
+            raise Exception(f"Aucune ligne insérée dans la table {table_name} via COPY INTO.")
+
         # Nettoyage
         os.remove(tmp_csv.name)
 
