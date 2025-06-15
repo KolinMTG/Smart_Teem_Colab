@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS INDIVIDUAL (
     INDV_FIRS_NAME VARCHAR(100) NOT NULL,
     INDV_STTS_CD VARCHAR(10) NOT NULL,
     CRTN_DTTM TIMESTAMP(0) NOT NULL,
-    UPDT_DTTM TIMESTAMP(0),--a remettre a not null une fois que colin a regler le probleme de sdates
+    UPDT_DTTM TIMESTAMP(0) NOT NULL,--a remettre a not null une fois que colin a regler le probleme de sdates
     BIRT_DT DATE,
     BIRT_CITY VARCHAR(100),
     BIRT_CNTR VARCHAR(100),
