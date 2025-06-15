@@ -8,8 +8,6 @@ from airflow.exceptions import AirflowException
 import logging, os
 #from main import run_etl_pipeline
 
-USE_DAG_RUN_ID = False
-
 dossier_dag = os.path.dirname(os.path.abspath(__file__)) + "/main.py"
 
 def fonction_tache_1(date_str_param, timestamp, dag_run_id):
@@ -54,7 +52,7 @@ tache_fin = DummyOperator(
 )
 
 tache_1 = PythonOperator(
-    task_id='run_etl_pipeline',
+    task_id='log_run_etl_pipeline',
     python_callable=fonction_tache_1,
     # Utilisation de op_kwargs et de la templating Jinja pour passer le paramètre
     op_kwargs={
@@ -66,12 +64,8 @@ tache_1 = PythonOperator(
 )
 
 tache_2 = BashOperator(
-    task_id="bash_example",
-    bash_command=\
-            f'python {dossier_dag} ' + '{{ dag_run.conf.get("date_str", "valeur_par_defaut") }} {{ run_id }} True'\
-        if USE_DAG_RUN_ID\
-        else\
-            f'python {dossier_dag} ' + '{{ dag_run.conf.get("date_str", "valeur_par_defaut") }} {{ ts }} False'
+    task_id="call_run_etl_pipeline",
+    bash_command=f'python {dossier_dag} ' + '{{ dag_run.conf.get("date_str", "valeur_par_defaut") }} {{ ts }}'
 )
 
 # --- Définition de l'ordre d'exécution ---

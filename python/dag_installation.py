@@ -44,13 +44,13 @@ tache_fin = DummyOperator(
 )
 
 tache_1 = PythonOperator(
-    task_id='run_installation',
+    task_id='log_run_installation',
     python_callable=fonction_tache_1,
     dag=dag,
 )
 
 tache_2 = BashOperator(
-    task_id="bash_example",
+    task_id="call_run_installation",
     bash_command=f"python {dossier_dag}",
 )
 
