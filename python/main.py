@@ -174,23 +174,26 @@ if __name__ == "__main__":
             "20240507", "20240508"
         ]
         #dates = ["20240429"] # Pour ne charger qu'une seule date
-        run_etl_pipeline(dates)
+        #run_etl_pipeline(dates)
         #créer les vues et exporter en csv
         run_create_views()
         views = [
-            "VW_AVG_AGE_BY_PATHOLOGY",
-            "VW_TOP_MEDICATION_BY_PATHOLOGY",
-            "VW_ROOMS_BY_PATHOLOGY",
-            "VW_DOCTOR_SPECIALTY_BY_PATHOLOGY",
-            "VW_PATIENTS_ONE_NIGHT",
-            "VW_EMPTY_ROOMS"
+            "VW_DOCTOR_PATHOLOGY_PERIOD",
+            "VW_HOSPITAL_STAYS",
+            "VW_MEDICATION_BY_PATHOLOGY",
+            "VW_PATIENT_AGE_BY_PATHOLOGY",
+            "VW_ROOMS_WITH_PATHOLOGY",
+            "VW_ROOM_OCCUPANCY_STATUS"
         ]
+
+
         export_views_to_csv(
             views=views,
             database="BASE_SOCLE",
             schema="PUBLIC",
             output_dir="csv"
         )
+
 
     # Le fichier est exécuté par le DAG de chargement
     elif len(sys.argv) == 3:

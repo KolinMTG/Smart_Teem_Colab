@@ -1,10 +1,9 @@
-CREATE OR REPLACE VIEW BASE_SOCLE.PUBLIC.vw_doctor_specialty_by_pathology AS
+CREATE OR REPLACE VIEW BASE_SOCLE.PUBLIC.vw_doctor_pathology_period AS
 SELECT 
     c.PATH_DSC AS pathology,
     s.PART_ID AS doctor_id,
-    COUNT(*) AS nb_diagnostics
+    c.CONS_STRT_DTTM AS consultation_date
 FROM BASE_SOCLE.PUBLIC.CONSULTATION c
 JOIN BASE_SOCLE.PUBLIC.STAFF s 
     ON c.STFF_ID = s.PART_ID
-WHERE c.PATH_DSC IS NOT NULL
-GROUP BY c.PATH_DSC, s.PART_ID;
+WHERE c.PATH_DSC IS NOT NULL;
