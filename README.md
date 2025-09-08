@@ -43,7 +43,7 @@ Le projet est découpé en 4 lots d'une semaine chacuns :
 - Mise en forme des indicateurs clés pour le suivi d’activité
 
 La structure globale des tables et l'organisation du projet est résumé ci-dessous
-[Pipeline_and_organisation](documents\pipeline_and_organisation.png)
+[Pipeline_and_organisation](documents/pipeline_and_organisation.png)
 
 
 ## Environnement de travail
